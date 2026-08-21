@@ -1,0 +1,53 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import numpy as np
+import joblib
+
+app = Flask(__name__)
+CORS(app)
+
+print("Starting Flask app...")
+
+# Load trained model & scaler
+model = joblib.load("diabetes_model.pkl")
+scaler = joblib.load("scaler.pkl")
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Flask server is running"
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    data = request.get_json()
+
+    features = np.array([[
+        float(data.get("pregnancies", 0)),
+        float(data.get("glucose", 0)),
+        float(data.get("bloodPressure", 0)),
+        float(data.get("skinThickness", 0)),
+        float(data.get("insulin", 0)),
+        float(data.get("bmi", 0)),
+        float(data.get("pedigree", 0)),
+        float(data.get("age", 0))
+    ]])
+
+    features_scaled = scaler.transform(features)
+    probability = model.predict_proba(features_scaled)[0][1]
+
+    risk_percentage = round(probability * 100, 2)
+
+    if risk_percentage < 30:
+        risk_level = "Low Risk"
+    elif risk_percentage < 60:
+        risk_level = "Moderate Risk"
+    else:
+        risk_level = "High Risk"
+
+    return jsonify({
+        "risk_percentage": risk_percentage,
+        "risk_level": risk_level
+    })
+
+if __name__ == "__main__":
+    print("Running Flask server...")
+    app.run(debug=True)

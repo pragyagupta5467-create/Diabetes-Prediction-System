@@ -1,0 +1,20 @@
+# Query: randomforest
+# ContextLines: 1
+
+2 results - 1 file
+
+backend\train_model.py:
+   3  from sklearn.model_selection import train_test_split
+   4: from sklearn.ensemble import RandomForestClassifier
+   5  from sklearn.preprocessing import StandardScaler
+
+  26  
+  27: model = RandomForestClassifier(n_estimators=200, random_state=42)
+  28  model.fit(X_train_scaled, y_train)
+from sklearn.metrics import accuracy_score
+
+y_pred = model.predict(X_test_scaled)
+
+accuracy = accuracy_score(y_test, y_pred)
+
+print("Model Accuracy:", accuracy)
