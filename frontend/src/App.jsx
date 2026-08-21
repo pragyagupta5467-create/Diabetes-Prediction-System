@@ -198,24 +198,11 @@ function App() {
         setHistory(newHistory);
         localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
       }, 2000);
-    } catch {
-      setTimeout(() => {
-        const mockResult = {
-          risk_percentage: Math.floor(Math.random() * 100),
-          risk_level: ["Low Risk", "Medium Risk", "High Risk"][
-            Math.floor(Math.random() * 3)
-          ],
-          timestamp: new Date().toISOString(),
-          inputs: { ...form },
-        };
-        setResult(mockResult);
-        setShowResults(true);
-        setLoading(false);
-
-        const newHistory = [mockResult, ...history].slice(0, 10);
-        setHistory(newHistory);
-        localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
-      }, 2000);
+    }catch (error) {
+  console.error("Prediction failed:", error);
+  setLoading(false);
+  alert("Unable to connect to the prediction server. Please try again.");
+}
     }
   };
 
