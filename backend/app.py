@@ -5,17 +5,23 @@ import joblib
 
 app = Flask(__name__)
 
-# Allow requests from the deployed frontend
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type"]
-)
+# Enable CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+
+# Explicit CORS headers for every response
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
 
 print("Starting Flask app...")
 
-# Load trained model & scaler
+
+# Load trained model and scaler
 model = joblib.load("diabetes_model.pkl")
 scaler = joblib.load("scaler.pkl")
 
@@ -25,8 +31,13 @@ def home():
     return "Flask server is running"
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
+
+    # Handle browser CORS preflight request
+    if request.method == "OPTIONS":
+        return "", 204
+
     data = request.get_json()
 
     features = np.array([[
@@ -40,12 +51,15 @@ def predict():
         float(data.get("age", 0))
     ]])
 
+    # Scale input
     features_scaled = scaler.transform(features)
 
+    # Prediction probability
     probability = model.predict_proba(features_scaled)[0][1]
 
     risk_percentage = round(probability * 100, 2)
 
+    # Risk classification
     if risk_percentage < 30:
         risk_level = "Low Risk"
     elif risk_percentage < 60:
