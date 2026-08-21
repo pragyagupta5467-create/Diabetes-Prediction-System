@@ -198,7 +198,7 @@ function App() {
         setHistory(newHistory);
         localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
       }, 2000);
-    }catch (error) {
+    } catch (error) {
   console.error("Prediction failed:", error);
   setLoading(false);
   alert("Unable to connect to the prediction server. Please try again.");
