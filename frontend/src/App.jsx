@@ -203,7 +203,6 @@ function App() {
   setLoading(false);
   alert("Unable to connect to the prediction server. Please try again.");
 }
-    }
   };
 
   const exportResults = () => {
