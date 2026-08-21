@@ -1,27 +1,27 @@
-# Diabetes Prediction System
+ Diabetes Prediction System
 A Machine Learning-based Diabetes Prediction System developed to predict the likelihood of diabetes using patient health parameters. The project utilizes advanced data preprocessing techniques and ensemble machine learning algorithms to achieve high predictive performance.
-## Project Overview
+ Project Overview
 This system analyzes patient medical information such as glucose level, blood pressure, BMI, insulin level, age, and other health indicators to predict diabetes risk. The objective is to support early diagnosis and improve healthcare decision-making through data-driven insights.
-## Key Features
+ Key Features
 - Diabetes Risk Prediction
 - Data Preprocessing and Feature Engineering
 - Machine Learning Model Training and Evaluation
 - Ensemble Learning Techniques
 - High Accuracy Prediction System
 - Scalable and User-Friendly Architecture
-## Technologies Used
-### Programming Language
+ Technologies Used
+ Programming Language
 - Python
-### Libraries
+ Libraries
 - Pandas
 - NumPy
 - Scikit-Learn
 - XGBoost
 - Matplotlib
-## Machine Learning Algorithms
+ Machine Learning Algorithms
 - Random Forest Classifier
 - XGBoost Classifier
-## Dataset Features
+ Dataset Features
 - Pregnancies
 - Glucose
 - Blood Pressure
@@ -30,45 +30,44 @@ This system analyzes patient medical information such as glucose level, blood pr
 - BMI
 - Diabetes Pedigree Function
 - Age
-## Model Performance
-| Metric | Score |
-|----------|----------|
-| Accuracy | 97% |
-| Recall | 92% |
-| Precision | 95% |
-| F1-Score | 93% |
+ Model Performance
+ Metric | Score 
+ Accuracy | 97% 
+ Recall | 92% 
+ Precision | 95% 
+ F1-Score  93% 
 The model was evaluated using standard machine learning evaluation metrics to ensure reliable and robust prediction performance.
-## Project Structure
+ Project Structure
 Diabetes-Prediction-System/
-│
-├── app.py
-├── train_model.py
-├── StatisticsML.py
-├── diabetes.csv
-├── diabetes_model.pkl
-├── scaler.pkl
-├── requirements.txt
-├── frontend/
-└── README.md
 
-## Methodology
+ app.py
+train_model.py
+StatisticsML.py
+diabetes.csv
+diabetes_model.pkl
+scaler.pkl
+requirements.txt
+frontend/
+README.md
+
+ Methodology
 The project was developed using the Pima Indians Diabetes Dataset. The dataset was preprocessed by handling missing values, scaling numerical features, and preparing the data for model training.
 Two ensemble machine learning algorithms, **Random Forest** and **XGBoost**, were selected because they provide high accuracy, handle complex relationships between features effectively, reduce overfitting, and perform well on healthcare datasets.
 The dataset was divided into training and testing sets. Models were trained on the training data and evaluated on unseen test data using performance metrics such as Accuracy, Precision, Recall, and F1-Score.
-## Results
-- Accuracy: **97%**
-- Recall: **92%**
+ Results
+- Accuracy: 97%
+- Recall: 92%
 
 The results demonstrate the effectiveness of ensemble learning techniques for diabetes risk prediction and healthcare analytics.
-## Future Enhancements
+Future Enhancements
 - Real-Time Prediction Dashboard
 - Cloud Deployment
 - Improved Feature Selection
 - Integration with Healthcare Systems
 - Explainable AI (XAI) Support
 
-## Author
-**Pragya Gupta**  
+ Author
+Pragya Gupta
 MCA Student, IIIT Bhopal  
 Java Developer | Machine Learning Enthusiast | DSA Learner
 
