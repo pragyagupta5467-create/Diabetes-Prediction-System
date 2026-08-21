@@ -4,7 +4,14 @@ import numpy as np
 import joblib
 
 app = Flask(__name__)
-CORS(app)
+
+# Allow requests from the deployed frontend
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"]
+)
 
 print("Starting Flask app...")
 
@@ -12,9 +19,11 @@ print("Starting Flask app...")
 model = joblib.load("diabetes_model.pkl")
 scaler = joblib.load("scaler.pkl")
 
+
 @app.route("/", methods=["GET"])
 def home():
     return "Flask server is running"
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -32,6 +41,7 @@ def predict():
     ]])
 
     features_scaled = scaler.transform(features)
+
     probability = model.predict_proba(features_scaled)[0][1]
 
     risk_percentage = round(probability * 100, 2)
@@ -47,6 +57,7 @@ def predict():
         "risk_percentage": risk_percentage,
         "risk_level": risk_level
     })
+
 
 if __name__ == "__main__":
     print("Running Flask server...")
