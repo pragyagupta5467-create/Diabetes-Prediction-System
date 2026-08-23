@@ -22,7 +22,7 @@ const loadHistory = () => {
   }
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+const API_URL = import.meta.env.VITE_API_URL || "https://diabetes-prediction-system-1-qw0.onrender.com";
 
 function App() {
   const [form, setForm] = useState({
@@ -206,11 +206,9 @@ function App() {
         localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
       }, 1000);
     } catch (error) {
-      console.error("Prediction error:", error);
-      setTimeout(() => {
-        alert("Unable to connect to the Diabetes Prediction server. Please ensure the backend service is active.");
-        setLoading(false);
-      }, 1000);
+      console.error("Prediction failed:", error);
+      setLoading(false);
+      alert("Unable to connect to the prediction server. Please try again.");
     }
   };
 
