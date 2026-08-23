@@ -22,7 +22,7 @@ const loadHistory = () => {
   }
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "https://diabetes-prediction-system-1-qw0.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://diabetes-prediction-system-1-qvw0.onrender.com";
 
 function App() {
   const [form, setForm] = useState({
