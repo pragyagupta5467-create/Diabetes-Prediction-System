@@ -1,30 +1,37 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
+from werkzeug.exceptions import HTTPException
 import numpy as np
 import joblib
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
 # Enable CORS globally for all origins, resources, methods, and headers
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
-# Add explicit CORS headers to every response (including error responses)
+# Add explicit CORS headers to every response
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, HEAD"
     return response
 
-# Catch-all error handler to ensure 500 errors always return CORS headers + JSON
+# Error handler that preserves HTTP status codes (e.g., 404, 400) and adds CORS headers
 @app.errorhandler(Exception)
 def handle_exception(e):
-    response = jsonify({"error": str(e)})
-    response.status_code = 500
+    if isinstance(e, HTTPException):
+        response = jsonify({"error": e.description, "status_code": e.code})
+        response.status_code = e.code
+    else:
+        response = jsonify({"error": str(e), "status_code": 500})
+        response.status_code = 500
+
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, HEAD"
     return response
 
 print("Starting Flask app...")
@@ -44,6 +51,7 @@ except Exception as err:
     scaler = None
 
 @app.route("/", methods=["GET", "OPTIONS"])
+@app.route("/health", methods=["GET", "OPTIONS"])
 @cross_origin()
 def home():
     if request.method == "OPTIONS":
@@ -53,19 +61,30 @@ def home():
     return jsonify({
         "status": "online",
         "message": "Diabetes Prediction Server is running",
-        "model_loaded": model is not None
+        "model_loaded": model is not None,
+        "endpoints": {
+            "predict": "/predict [POST]"
+        }
     })
 
-@app.route("/predict", methods=["POST", "OPTIONS"])
+@app.route("/predict", methods=["GET", "POST", "OPTIONS"])
+@app.route("/api/predict", methods=["GET", "POST", "OPTIONS"])
 @cross_origin()
 def predict():
     # Handle browser CORS preflight (OPTIONS) request explicitly
     if request.method == "OPTIONS":
         response = jsonify({"status": "ok"})
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         return response, 200
+
+    # If accessed via GET (e.g. browser URL test)
+    if request.method == "GET":
+        return jsonify({
+            "status": "ready",
+            "message": "Send a POST request with JSON body containing health parameters (pregnancies, glucose, bloodPressure, skinThickness, insulin, bmi, pedigree, age) to predict diabetes risk."
+        }), 200
 
     if model is None or scaler is None:
         return jsonify({"error": "Model or scaler failed to load on server."}), 500
