@@ -6,14 +6,24 @@ import joblib
 
 app = Flask(__name__)
 
-# Enable CORS
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Enable CORS globally for all origins, resources, methods, and headers
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
-# Explicit CORS headers for every response
+# Add explicit CORS headers to every response (including error responses)
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+# Catch-all error handler to ensure 500 errors always return CORS headers + JSON
+@app.errorhandler(Exception)
+def handle_exception(e):
+    response = jsonify({"error": str(e)})
+    response.status_code = 500
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
@@ -24,23 +34,37 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "diabetes_model.pkl")
 SCALER_PATH = os.path.join(BASE_DIR, "scaler.pkl")
 
-model = joblib.load(MODEL_PATH)
-scaler = joblib.load(SCALER_PATH)
+try:
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
+    print("Model and Scaler loaded successfully.")
+except Exception as err:
+    print(f"Error loading model/scaler: {err}")
+    model = None
+    scaler = None
 
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
         "status": "online",
-        "message": "Diabetes Prediction Server is running"
+        "message": "Diabetes Prediction Server is running",
+        "model_loaded": model is not None
     })
 
 @app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
-    # Handle browser CORS preflight request
+    # Handle browser CORS preflight (OPTIONS) request
     if request.method == "OPTIONS":
-        return "", 204
+        response = app.make_default_options_response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        return response
 
-    data = request.get_json()
+    if model is None or scaler is None:
+        return jsonify({"error": "Model or scaler failed to load on server."}), 500
+
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Invalid request. JSON payload required."}), 400
 
