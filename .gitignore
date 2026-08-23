@@ -1,0 +1,16 @@
+# Python
+backend/venv/
+backend/__pycache__/
+*.pyc
+*.pkl
+pipeline_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+.env
+.env.local
+
+# IDE & System
+.DS_Store
+.vscode/

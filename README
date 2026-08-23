@@ -41,14 +41,22 @@ The model was evaluated using standard machine learning evaluation metrics to en
 ## Project Structure
 Diabetes-Prediction-System/
 │
-├── app.py
-├── train_model.py
-├── StatisticsML.py
-├── diabetes.csv
-├── diabetes_model.pkl
-├── scaler.pkl
-├── requirements.txt
+├── backend/
+│   ├── app.py
+│   ├── train_model.py
+│   ├── StatisticsML.py
+│   ├── diabetes.csv
+│   ├── diabetes_model.pkl
+│   ├── scaler.pkl
+│   ├── requirements.txt
+│   └── Procfile
 ├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── .env.example
+├── .gitignore
 └── README.md
 
 ## Methodology

@@ -22,6 +22,8 @@ const loadHistory = () => {
   }
 };
 
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+
 function App() {
   const [form, setForm] = useState({
     pregnancies: "",
@@ -176,11 +178,16 @@ function App() {
     setShowResults(false);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/predict", {
+      const response = await fetch(`${API_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
+
+      if (!response.ok) {
+        throw new Error(`API server error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       setTimeout(() => {
@@ -197,25 +204,13 @@ function App() {
         const newHistory = [resultWithTimestamp, ...history].slice(0, 10);
         setHistory(newHistory);
         localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
-      }, 2000);
-    } catch {
+      }, 1000);
+    } catch (error) {
+      console.error("Prediction error:", error);
       setTimeout(() => {
-        const mockResult = {
-          risk_percentage: Math.floor(Math.random() * 100),
-          risk_level: ["Low Risk", "Medium Risk", "High Risk"][
-            Math.floor(Math.random() * 3)
-          ],
-          timestamp: new Date().toISOString(),
-          inputs: { ...form },
-        };
-        setResult(mockResult);
-        setShowResults(true);
+        alert("Unable to connect to the Diabetes Prediction server. Please ensure the backend service is active.");
         setLoading(false);
-
-        const newHistory = [mockResult, ...history].slice(0, 10);
-        setHistory(newHistory);
-        localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
-      }, 2000);
+      }, 1000);
     }
   };
 
