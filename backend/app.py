@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import numpy as np
 import joblib
 
@@ -43,8 +43,13 @@ except Exception as err:
     model = None
     scaler = None
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "OPTIONS"])
+@cross_origin()
 def home():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "ok"})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 200
     return jsonify({
         "status": "online",
         "message": "Diabetes Prediction Server is running",
@@ -52,14 +57,15 @@ def home():
     })
 
 @app.route("/predict", methods=["POST", "OPTIONS"])
+@cross_origin()
 def predict():
-    # Handle browser CORS preflight (OPTIONS) request
+    # Handle browser CORS preflight (OPTIONS) request explicitly
     if request.method == "OPTIONS":
-        response = app.make_default_options_response()
+        response = jsonify({"status": "ok"})
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        return response
+        return response, 200
 
     if model is None or scaler is None:
         return jsonify({"error": "Model or scaler failed to load on server."}), 500
