@@ -1,4 +1,5 @@
 import { useState } from "react";
+import HealthAssistant from "./HealthAssistant";
 
 const createParticles = () =>
   Array.from({ length: 30 }, (_, i) => {
@@ -201,7 +202,9 @@ function App() {
         setLoading(false);
 
         // Save to history
-        const newHistory = [resultWithTimestamp, ...history].slice(0, 10);
+        const historyEntry = { ...resultWithTimestamp };
+        delete historyEntry.chat_context_token;
+        const newHistory = [historyEntry, ...history].slice(0, 10);
         setHistory(newHistory);
         localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
       }, 1000);
@@ -249,7 +252,7 @@ function App() {
         secondary: "#059669",
         glow: "rgba(16, 185, 129, 0.5)",
       };
-    if (result.risk_level === "Medium Risk")
+    if (result.risk_level === "Moderate Risk")
       return {
         primary: "#f59e0b",
         secondary: "#d97706",
@@ -296,7 +299,7 @@ function App() {
     }
 
     // MEDIUM RISK
-    if (result.risk_level === "Medium Risk") {
+    if (result.risk_level === "Moderate Risk") {
       return [
         {
           icon: "!",
@@ -439,10 +442,6 @@ function App() {
   ];
 
   const colors = getRiskColor();
-  const riskPercentage = Number(result?.risk_percentage);
-  const confidenceScore =
-    75 + (Number.isFinite(riskPercentage) ? Math.abs(Math.trunc(riskPercentage)) % 5 : 0);
-
   return (
     <div
       className={`min-h-screen relative overflow-hidden transition-all duration-700 ${darkMode
@@ -615,13 +614,14 @@ function App() {
         <br></br>
         {/* Tab Navigation */}
         <div
-          className={`flex gap-2 mb-8 p-2 rounded-2xl ${darkMode
+          className={`flex flex-wrap gap-2 mb-8 p-2 rounded-2xl ${darkMode
             ? "bg-gray-800/50 backdrop-blur-xl border border-gray-700/50"
             : "bg-white/50 backdrop-blur-xl border border-gray-200"
             }`}
         >
           {[
             { id: "predict", label: "Risk Analysis", icon: "◈" },
+            { id: "assistant", label: "AI Assistant", icon: "✦" },
             { id: "tools", label: "Health Tools", icon: "◉" },
             { id: "history", label: "History", icon: "◐" },
             { id: "insights", label: "Insights", icon: "◆" },
@@ -761,6 +761,18 @@ function App() {
                     Export ↓
                   </button>
                 )}
+                {result && (
+                  <button
+                    onClick={() => switchTab("assistant")}
+                    className={`px-6 h-16 rounded-2xl font-bold transition-all duration-300 hover:scale-105 ${
+                      darkMode
+                        ? "bg-purple-700 text-white"
+                        : "bg-purple-100 text-purple-900"
+                    } shadow-xl`}
+                  >
+                    Ask the AI assistant
+                  </button>
+                )}
               </div>
             </div>
 
@@ -854,11 +866,11 @@ function App() {
                       {/* Center text */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
-                          <p className={`text-sm font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                            Confidence
+                          <p className={`text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                            Educational
                           </p>
-                          <p className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-                            {confidenceScore}%
+                          <p className={`text-sm font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                            Not a diagnosis
                           </p>
                         </div>
                       </div>
@@ -882,7 +894,7 @@ function App() {
                   >
                     {result.risk_level === "Low Risk" &&
                       "✓ Excellent Health Status"}
-                    {result.risk_level === "Medium Risk" &&
+                    {result.risk_level === "Moderate Risk" &&
                       "! Action Plan Required"}
                     {result.risk_level === "High Risk" &&
                       "⚠ Immediate Intervention Needed"}
@@ -930,6 +942,15 @@ function App() {
             )}
           </div>
         )}
+
+        <div className={activeTab === "assistant" ? "" : "hidden"}>
+          <HealthAssistant
+            predictionToken={result?.chat_context_token}
+            predictionTimestamp={result?.timestamp}
+            hasPrediction={Boolean(result?.risk_percentage)}
+            darkMode={darkMode}
+          />
+        </div>
 
         {/* Health Tools Tab */}
         {activeTab === "tools" && (
@@ -1125,7 +1146,7 @@ function App() {
                   const itemColor =
                     item.risk_level === "Low Risk"
                       ? "#10b981"
-                      : item.risk_level === "Medium Risk"
+                      : item.risk_level === "Moderate Risk"
                         ? "#f59e0b"
                         : "#ef4444";
 

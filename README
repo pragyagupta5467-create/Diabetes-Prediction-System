@@ -6,6 +6,7 @@ This system analyzes patient medical information such as glucose level, blood pr
 
 ## Key Features
 - Diabetes Risk Prediction
+- Context-aware AI diabetes education assistant
 - Data Preprocessing and Feature Engineering
 - Machine Learning Model Training and Evaluation
 - Ensemble Learning Techniques
@@ -75,6 +76,81 @@ The project was developed using the Pima Indians Diabetes Dataset. The dataset w
 - Recall: **92%**
 
 The results demonstrate the effectiveness of ensemble learning techniques for diabetes risk prediction and healthcare analytics.
+
+## AI Health Assistant
+
+The React frontend sends chat messages to the Flask backend at `POST /api/chat`. The
+backend validates the message and bounded conversation history, then calls the configured
+LLM provider with the provider credentials kept server-side. When a prediction was made
+with `CHAT_CONTEXT_SECRET` configured, the prediction endpoint also returns a signed,
+two-hour context token. The chat endpoint verifies that token before sharing the prediction
+result and a small set of measurements with the model provider. Without a token, the
+assistant remains available for general diabetes education.
+
+The assistant's responses are educational information only. The prediction is a model
+estimate, not a diagnosis or an individually validated clinical risk assessment. Do not
+use either feature in place of professional medical care.
+
+### Configure and run locally
+
+Prerequisites: Python 3.10 or later and Node.js 20.19+ (or 22.12+).
+
+1. In `backend`, create and activate a Python virtual environment, then install
+   `requirements.txt`.
+2. Copy `backend/.env.example` to `backend/.env`. Set `OPENAI_API_KEY` to a key from an
+   OpenAI API account, keep `LLM_PROVIDER=openai`, and choose a supported model in
+   `OPENAI_MODEL`. Generate `CHAT_CONTEXT_SECRET` with
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`. The `.env` file is
+   ignored by Git. Never put provider credentials in frontend environment variables.
+3. Start the API from `backend` with `python app.py` (default:
+   `http://127.0.0.1:5000`).
+4. In a second terminal, go to `frontend`, run `npm ci`, set
+   `VITE_API_URL=http://127.0.0.1:5000` in that terminal, and run `npm run dev`.
+5. Open the Vite development URL and select **AI Assistant**, or choose **Ask the AI
+   assistant** after making a prediction.
+
+The AI provider requires an account with API access. Provider usage may incur charges and
+is subject to the account's model availability, rate limits, and pricing. Chat requests
+use a bounded history and response length, but provider usage is still billable. The
+application does not persist chat history on the backend; the current conversation lives
+in frontend memory and resets when a new prediction or page session starts.
+
+### Chat API
+
+Request:
+
+```json
+{
+  "message": "What does my prediction mean?",
+  "history": [
+    {"role": "user", "content": "I received a result."},
+    {"role": "assistant", "content": "I can explain it as an educational estimate."}
+  ],
+  "prediction_context": "<signed token returned by POST /predict>"
+}
+```
+
+`history` is optional and limited to 10 messages; `message` is required and limited to
+2,000 characters. `prediction_context` is optional. Omit it for general questions.
+Successful requests return `{"reply":"..."}`. Errors return an `error` object with a
+machine-readable `code` and user-safe `message`. `POST /predict` continues to return the
+existing `risk_percentage` and `risk_level` fields and adds `chat_context_token` when
+context signing is configured.
+
+### Tests and troubleshooting
+
+From `backend`, run the mocked-provider tests with
+`python -m unittest discover -s tests`. From `frontend`, run `npm run lint` and
+`npm run build`.
+
+- If the assistant says it is not configured, check `OPENAI_API_KEY` and
+  `LLM_PROVIDER` in `backend/.env`, then restart Flask.
+- If prediction-aware chat is unavailable, verify that `CHAT_CONTEXT_SECRET` is at least
+  32 characters and restart the backend. Context tokens expire after two hours.
+- If the frontend cannot reach the API, check that Flask is running and set
+  `VITE_API_URL` to the backend URL before starting Vite.
+- Provider timeouts, rate limits, and service failures are reported with retry guidance;
+  the app does not return simulated answers.
 
 ## Future Enhancements
 - Real-Time Prediction Dashboard
