@@ -60,7 +60,11 @@ def _decode_urlsafe(value):
 def _context_secret():
     secret = os.environ.get("CHAT_CONTEXT_SECRET", "").strip()
     if not secret:
-        return None
+        raise ChatServiceError(
+            503,
+            "chat_context_not_configured",
+            "Prediction-aware chat is unavailable because CHAT_CONTEXT_SECRET is not configured.",
+        )
     if len(secret) < 32:
         raise ChatServiceError(
             503,
@@ -72,8 +76,6 @@ def _context_secret():
 
 def create_chat_context_token(inputs, risk_percentage, risk_level):
     secret = _context_secret()
-    if secret is None:
-        return None
 
     issued_at = int(time.time())
     payload = {

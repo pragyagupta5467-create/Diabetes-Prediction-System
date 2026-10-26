@@ -1,8 +1,8 @@
 # Diabetes Prediction System
-A Machine Learning-based Diabetes Prediction System developed to predict the likelihood of diabetes using patient health parameters. The project utilizes advanced data preprocessing techniques and ensemble machine learning algorithms to achieve high predictive performance.
+A machine-learning application that returns an educational diabetes risk estimate from health parameters. Its output is not a diagnosis or a clinically validated individual risk assessment.
 
 ## Project Overview
-This system analyzes patient medical information such as glucose level, blood pressure, BMI, insulin level, age, and other health indicators to predict diabetes risk. The objective is to support early diagnosis and improve healthcare decision-making through data-driven insights.
+This system analyzes health measurements such as glucose, blood pressure, BMI, insulin, age, and other indicators to estimate a model class probability.
 
 ## Key Features
 - Diabetes Risk Prediction
@@ -10,7 +10,6 @@ This system analyzes patient medical information such as glucose level, blood pr
 - Data Preprocessing and Feature Engineering
 - Machine Learning Model Training and Evaluation
 - Ensemble Learning Techniques
-- High Accuracy Prediction System
 - Scalable and User-Friendly Architecture
 
 ## Technologies Used
@@ -35,15 +34,23 @@ This system analyzes patient medical information such as glucose level, blood pr
 - Diabetes Pedigree Function
 - Age
 
-## Model Performance
+## Model evaluation
+
+The versioned Random Forest pipeline was evaluated on a reproducible 20% stratified
+holdout split (`random_state=42`): 154 rows, including 100 class-0 and 54 class-1
+examples. The recorded holdout metrics were:
+
 | Metric | Score |
 |----------|----------|
-| Accuracy | 97% |
-| Recall | 92% |
-| Precision | 95% |
-| F1-Score | 93% |
+| Accuracy | 74.68% |
+| Recall (class 1) | 57.41% |
+| Precision (class 1) | 65.96% |
+| F1 (class 1) | 61.39% |
 
-The model was evaluated using standard machine learning evaluation metrics to ensure reliable and robust prediction performance.
+Confusion matrix (rows=true class, columns=predicted class): `[[84, 16], [23, 31]]`.
+These are a single small-dataset holdout result, not a validation of clinical usefulness,
+calibration, or performance on other populations. The API's percentage is the classifier's
+class-1 probability, not a clinically calibrated individual risk or diagnosis.
 
 ## Project Structure
 ```text
@@ -54,8 +61,9 @@ Diabetes-Prediction-System/
 │   ├── train_model.py
 │   ├── StatisticsML.py
 │   ├── diabetes.csv
-│   ├── diabetes_model.pkl
-│   ├── scaler.pkl
+│   ├── diabetes_pipeline.pkl
+│   ├── diabetes_model.pkl       # preserved legacy artifact
+│   ├── scaler.pkl               # preserved legacy artifact
 │   ├── requirements.txt
 │   └── Procfile
 ├── frontend/
@@ -69,13 +77,18 @@ Diabetes-Prediction-System/
 ```
 
 ## Methodology
-The project was developed using the Pima Indians Diabetes Dataset. The dataset was preprocessed by handling missing values, scaling numerical features, and preparing the data for model training.
 
-## Results
-- Accuracy: **97%**
-- Recall: **92%**
+The training script reads `backend/diabetes.csv` as tab-separated data and preserves the
+feature order expected by the API. It treats zero values in Glucose, BloodPressure,
+SkinThickness, Insulin, and BMI as missing Pima-dataset sentinels. The imputer and scaler
+are fitted inside a scikit-learn Pipeline using only the training split for evaluation.
+The final inference pipeline is then refitted on all rows and saved atomically to a new,
+versioned artifact. The existing model and scaler artifacts are preserved and remain a
+legacy fallback; the training script refuses to overwrite an existing versioned pipeline.
 
-The results demonstrate the effectiveness of ensemble learning techniques for diabetes risk prediction and healthcare analytics.
+Pregnancies, age, glucose, blood pressure, and BMI must be supplied within the API's
+validated ranges. An entered zero for insulin or skin thickness means “not recorded” and
+is imputed from the training data; it is not treated as a measured value of zero.
 
 ## AI Health Assistant
 
@@ -101,7 +114,8 @@ Prerequisites: Python 3.10 or later and Node.js 20.19+ (or 22.12+).
    OpenAI API account, keep `LLM_PROVIDER=openai`, and choose a supported model in
    `OPENAI_MODEL`. Generate `CHAT_CONTEXT_SECRET` with
    `python -c "import secrets; print(secrets.token_urlsafe(32))"`. The `.env` file is
-   ignored by Git. Never put provider credentials in frontend environment variables.
+   ignored by Git. `CORS_ALLOWED_ORIGINS` is a comma-separated origin allow-list. Never
+   put provider credentials in frontend environment variables.
 3. Start the API from `backend` with `python app.py` (default:
    `http://127.0.0.1:5000`).
 4. In a second terminal, go to `frontend`, run `npm ci`, copy `.env.example` to
@@ -175,12 +189,18 @@ environment variables.
 
 Vercel frontend hosting does not run the Flask server. The Flask backend must be hosted
 separately. This repository has a root `Procfile` and root `requirements.txt` for the
-existing Render-style backend deployment. Configure the backend host with
+existing Render-style backend deployment. Use the root as Render's service root with its
+root Procfile (`gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT`), or set the service
+root to `backend` and use `backend/Procfile` (`gunicorn app:app --bind 0.0.0.0:$PORT`) with
+the backend requirements file. Configure the backend host with
 `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`, and a random
-`CHAT_CONTEXT_SECRET` of at least 32 characters. Keep the frontend URL pointed at that
-backend's HTTPS origin. Confirm that the backend is deployed before using the Vercel
-frontend. The presence of source code or a GitHub commit alone does not confirm a
-successful Vercel deployment.
+`CHAT_CONTEXT_SECRET` of at least 32 characters, plus `APP_ENV=production` and
+`CORS_ALLOWED_ORIGINS` set to the exact deployed Vercel origin. `APP_VERSION` or Render's
+`RENDER_GIT_COMMIT` appears in `/health` so the deployed revision can be checked.
+`frontend/.env.production.example` records the previously intended backend origin, but
+that origin must be confirmed healthy before relying on it. During this check, that URL
+returned HTTP 503 for `/` and `/health`; its current deployment and version could not be
+verified. Changing Vite environment variables requires a new frontend build/deployment.
 
 ## Future Enhancements
 - Real-Time Prediction Dashboard

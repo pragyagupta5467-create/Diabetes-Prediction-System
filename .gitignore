@@ -3,6 +3,7 @@ backend/venv/
 backend/__pycache__/
 *.pyc
 *.pkl
+!backend/diabetes_pipeline.pkl
 pipeline_cache/
 
 # Node
@@ -12,7 +13,12 @@ frontend/dist/
 .env.local
 backend/.env.*
 !backend/.env.example
+!backend/.env.production.example
 
 # IDE & System
 .DS_Store
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json

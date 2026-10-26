@@ -1,6 +1,7 @@
 import { useState } from "react";
 import HealthAssistant from "./HealthAssistant";
 import { postJson } from "./api";
+import { PREDICTION_INPUT_RULES, validatePredictionForm } from "./predictionForm";
 
 const createParticles = () =>
   Array.from({ length: 30 }, (_, i) => {
@@ -56,35 +57,9 @@ function App() {
 
 
   const validateForm = () => {
-    const newErrors = {};
-
-    if (!form.age || form.age < 1 || form.age > 120)
-      newErrors.age = "Age must be between 1 and 120";
-
-    if (!form.glucose || form.glucose < 50 || form.glucose > 300)
-      newErrors.glucose = "Glucose should be between 50 and 300 mg/dL";
-
-    if (!form.bloodPressure || form.bloodPressure < 40 || form.bloodPressure > 200)
-      newErrors.bloodPressure = "Blood Pressure should be between 40 and 200";
-
-    if (!form.bmi || form.bmi < 10 || form.bmi > 60)
-      newErrors.bmi = "BMI should be between 10 and 60";
-
-    if (!form.insulin || form.insulin < 0 || form.insulin > 900)
-      newErrors.insulin = "Insulin value looks invalid";
-
-    if (!form.skinThickness || form.skinThickness < 0 || form.skinThickness > 100)
-      newErrors.skinThickness = "Skin thickness should be below 100 mm";
-
-    if (form.pregnancies < 0 || form.pregnancies > 20)
-      newErrors.pregnancies = "Pregnancies must be between 0 and 20";
-
-    if (!form.pedigree || form.pedigree < 0 || form.pedigree > 3)
-      newErrors.pedigree = "Pedigree value should be between 0 and 3";
-
-    setErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
+    const validation = validatePredictionForm(form);
+    setErrors(validation.errors);
+    return validation.values;
   };
 
   const handleChange = (e) => {
@@ -171,16 +146,15 @@ function App() {
 
 
   const predictRisk = async () => {
-    if (!validateForm()) {
-      return; // stop execution if invalid
-    }
+    const validatedValues = validateForm();
+    if (!validatedValues) return;
     setLoading(true);
     setPredictionError("");
     setResult(null);
     setShowResults(false);
 
     try {
-      const data = await postJson("/predict", form, 90000);
+      const data = await postJson("/predict", validatedValues, 90000);
       if (
         !Number.isFinite(data.risk_percentage)
         || data.risk_percentage < 0
@@ -193,7 +167,7 @@ function App() {
       const resultWithTimestamp = {
         ...data,
         timestamp: new Date().toISOString(),
-        inputs: { ...form },
+        inputs: validatedValues,
       };
       setResult(resultWithTimestamp);
       setShowResults(true);
@@ -385,6 +359,7 @@ function App() {
       icon: "◉",
       unit: "years",
       color: "from-purple-500 to-pink-500",
+      ...PREDICTION_INPUT_RULES.age,
     },
     {
       name: "glucose",
@@ -392,6 +367,7 @@ function App() {
       icon: "◐",
       unit: "mg/dL",
       color: "from-red-500 to-orange-500",
+      ...PREDICTION_INPUT_RULES.glucose,
     },
     {
       name: "bloodPressure",
@@ -399,6 +375,7 @@ function App() {
       icon: "♥",
       unit: "mmHg",
       color: "from-pink-500 to-rose-500",
+      ...PREDICTION_INPUT_RULES.bloodPressure,
     },
     {
       name: "bmi",
@@ -406,6 +383,7 @@ function App() {
       icon: "◈",
       unit: "kg/m²",
       color: "from-blue-500 to-cyan-500",
+      ...PREDICTION_INPUT_RULES.bmi,
     },
     {
       name: "insulin",
@@ -413,6 +391,8 @@ function App() {
       icon: "◑",
       unit: "μU/mL",
       color: "from-green-500 to-emerald-500",
+      hint: "Enter 0 if not recorded; the model will impute it.",
+      ...PREDICTION_INPUT_RULES.insulin,
     },
     {
       name: "skinThickness",
@@ -420,6 +400,8 @@ function App() {
       icon: "◯",
       unit: "mm",
       color: "from-yellow-500 to-amber-500",
+      hint: "Enter 0 if not recorded; the model will impute it.",
+      ...PREDICTION_INPUT_RULES.skinThickness,
     },
     {
       name: "pregnancies",
@@ -427,6 +409,7 @@ function App() {
       icon: "◆",
       unit: "count",
       color: "from-indigo-500 to-purple-500",
+      ...PREDICTION_INPUT_RULES.pregnancies,
     },
     {
       name: "pedigree",
@@ -434,6 +417,7 @@ function App() {
       icon: "◊",
       unit: "factor",
       color: "from-violet-500 to-fuchsia-500",
+      ...PREDICTION_INPUT_RULES.pedigree,
     },
   ];
 
@@ -525,11 +509,11 @@ function App() {
               },
               {
                 label: "Accuracy",
-                value: "90–97%",
+                value: "74.68%",
                 icon: "◉",
                 color: "from-blue-500 to-cyan-500",
                 details:
-                  "Accuracy shows how often the model predicts correctly on unseen test data.",
+                  "One 154-row stratified holdout result (random_state=42); not a clinical performance guarantee.",
               },
               {
                 label: "Parameters",
@@ -537,7 +521,7 @@ function App() {
                 icon: "◐",
                 color: "from-green-500 to-emerald-500",
                 details:
-                  "Age, Glucose, Blood Pressure, BMI, Insulin, Skin Thickness, Pregnancies, Pedigree Function.",
+                  "Pregnancies, Glucose, Blood Pressure, Skin Thickness, Insulin, BMI, Pedigree Function, Age.",
               },
               {
                 label: "Dataset",
@@ -688,18 +672,27 @@ function App() {
                         <input
                           name={field.name}
                           type="number"
-                          step="any"
+                          step={field.integer ? "1" : "any"}
+                          min={field.min}
+                          max={field.max}
+                          required
+                          aria-invalid={Boolean(errors[field.name])}
                           value={form[field.name]}
                           onChange={handleChange}
-                          placeholder="0"
+                          placeholder={field.hint ? "0 = not recorded" : ""}
                           className={`w-full text-3xl font-bold bg-transparent outline-none ${darkMode
                             ? "text-white placeholder-gray-600"
                             : "text-gray-900 placeholder-gray-400"
                             }`}
                         />
                         {errors[field.name] && (
-                          <p className="mt-1 text-xs text-red-400 font-medium">
+                          <p id={`${field.name}-error`} className="mt-1 text-xs text-red-400 font-medium">
                             {errors[field.name]}
+                          </p>
+                        )}
+                        {field.hint && (
+                          <p className={`mt-1 text-xs ${darkMode ? "text-gray-500" : "text-gray-600"}`}>
+                            {field.hint}
                           </p>
                         )}
                         <p
@@ -948,7 +941,7 @@ function App() {
           <HealthAssistant
             predictionToken={result?.chat_context_token}
             predictionTimestamp={result?.timestamp}
-            hasPrediction={Boolean(result?.risk_percentage)}
+            hasPrediction={result !== null}
             darkMode={darkMode}
           />
         </div>
