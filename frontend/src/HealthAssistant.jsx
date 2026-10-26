@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL || "https://diabetes-prediction-system-1-qvw0.onrender.com";
+import { postJson } from "./api";
 
 const SUGGESTED_QUESTIONS = [
   "What does my prediction mean?",
@@ -58,22 +57,14 @@ function HealthAssistant({ predictionToken, predictionTimestamp, hasPrediction, 
     setSending(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await postJson("/api/chat", {
           message,
           history: previousMessages
             .filter((item) => item.role === "user" || item.role === "assistant")
             .slice(-10)
             .map(({ role, content }) => ({ role, content })),
           ...(predictionToken ? { prediction_context: predictionToken } : {}),
-        }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error?.message || "The assistant could not respond. Please try again.");
-      }
       if (typeof data.reply !== "string" || !data.reply.trim()) {
         throw new Error("The assistant returned an empty response. Please retry.");
       }

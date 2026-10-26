@@ -104,8 +104,11 @@ Prerequisites: Python 3.10 or later and Node.js 20.19+ (or 22.12+).
    ignored by Git. Never put provider credentials in frontend environment variables.
 3. Start the API from `backend` with `python app.py` (default:
    `http://127.0.0.1:5000`).
-4. In a second terminal, go to `frontend`, run `npm ci`, set
-   `VITE_API_URL=http://127.0.0.1:5000` in that terminal, and run `npm run dev`.
+4. In a second terminal, go to `frontend`, run `npm ci`, copy `.env.example` to
+   `.env.local` (or set `VITE_API_URL=http://127.0.0.1:5000` in that terminal), and run
+   `npm run dev`. The frontend defaults to the local Flask backend only while running
+   Vite in development mode. A production build without `VITE_API_URL` shows a
+   configuration error rather than silently calling the hosted backend.
 5. Open the Vite development URL and select **AI Assistant**, or choose **Ask the AI
    assistant** after making a prediction.
 
@@ -151,6 +154,33 @@ From `backend`, run the mocked-provider tests with
   `VITE_API_URL` to the backend URL before starting Vite.
 - Provider timeouts, rate limits, and service failures are reported with retry guidance;
   the app does not return simulated answers.
+
+### Vercel frontend deployment
+
+The repository does not include `vercel.json`, and the repository root has no frontend
+`package.json`. Configure the Vercel project to deploy the frontend directory:
+
+- **Root Directory:** `frontend`
+- **Framework Preset:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Install Command:** `npm ci`
+- **Node.js Version:** 22.x (or another version supported by the checked-in Vite version)
+- **Environment Variable:** `VITE_API_URL=https://diabetes-prediction-system-1-qvw0.onrender.com`
+  for Production, and for Preview if preview deployments should use the same backend.
+
+`VITE_API_URL` is substituted into the frontend at build time. Set or change it in Vercel
+and redeploy for the value to take effect. Do not put `OPENAI_API_KEY` in Vercel frontend
+environment variables.
+
+Vercel frontend hosting does not run the Flask server. The Flask backend must be hosted
+separately. This repository has a root `Procfile` and root `requirements.txt` for the
+existing Render-style backend deployment. Configure the backend host with
+`LLM_PROVIDER=openai`, `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`, and a random
+`CHAT_CONTEXT_SECRET` of at least 32 characters. Keep the frontend URL pointed at that
+backend's HTTPS origin. Confirm that the backend is deployed before using the Vercel
+frontend. The presence of source code or a GitHub commit alone does not confirm a
+successful Vercel deployment.
 
 ## Future Enhancements
 - Real-Time Prediction Dashboard

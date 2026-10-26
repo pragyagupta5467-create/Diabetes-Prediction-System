@@ -1,5 +1,6 @@
 import { useState } from "react";
 import HealthAssistant from "./HealthAssistant";
+import { postJson } from "./api";
 
 const createParticles = () =>
   Array.from({ length: 30 }, (_, i) => {
@@ -23,8 +24,6 @@ const loadHistory = () => {
   }
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "https://diabetes-prediction-system-1-qvw0.onrender.com";
-
 function App() {
   const [form, setForm] = useState({
     pregnancies: "",
@@ -39,6 +38,7 @@ function App() {
 
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [predictionError, setPredictionError] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [showResults, setShowResults] = useState(false);
   const [particles] = useState(createParticles);
@@ -175,43 +175,39 @@ function App() {
       return; // stop execution if invalid
     }
     setLoading(true);
+    setPredictionError("");
     setResult(null);
     setShowResults(false);
 
     try {
-      const response = await fetch(`${API_URL}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API server error: ${response.status}`);
+      const data = await postJson("/predict", form, 90000);
+      if (
+        !Number.isFinite(data.risk_percentage)
+        || data.risk_percentage < 0
+        || data.risk_percentage > 100
+        || !["Low Risk", "Moderate Risk", "High Risk"].includes(data.risk_level)
+      ) {
+        throw new Error("The prediction service returned an invalid result.");
       }
 
-      const data = await response.json();
+      const resultWithTimestamp = {
+        ...data,
+        timestamp: new Date().toISOString(),
+        inputs: { ...form },
+      };
+      setResult(resultWithTimestamp);
+      setShowResults(true);
 
-      setTimeout(() => {
-        const resultWithTimestamp = {
-          ...data,
-          timestamp: new Date().toISOString(),
-          inputs: { ...form },
-        };
-        setResult(resultWithTimestamp);
-        setShowResults(true);
-        setLoading(false);
-
-        // Save to history
-        const historyEntry = { ...resultWithTimestamp };
-        delete historyEntry.chat_context_token;
-        const newHistory = [historyEntry, ...history].slice(0, 10);
-        setHistory(newHistory);
-        localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
-      }, 1000);
+      const historyEntry = { ...resultWithTimestamp };
+      delete historyEntry.chat_context_token;
+      const newHistory = [historyEntry, ...history].slice(0, 10);
+      setHistory(newHistory);
+      localStorage.setItem("diabetesHistory", JSON.stringify(newHistory));
     } catch (error) {
       console.error("Prediction failed:", error);
+      setPredictionError(error.message || "Prediction failed. Please try again.");
+    } finally {
       setLoading(false);
-      alert("Unable to connect to the prediction server. Please try again.");
     }
   };
 
@@ -774,6 +770,11 @@ function App() {
                   </button>
                 )}
               </div>
+              {predictionError && (
+                <p role="alert" className="mt-4 text-sm font-medium text-red-400">
+                  {predictionError}
+                </p>
+              )}
             </div>
 
             {/* Results */}

@@ -7,7 +7,7 @@ import numpy as np
 from openai import APIConnectionError, APITimeoutError, RateLimitError
 
 import app as prediction_app
-from chat_service import create_chat_context_token
+from chat_service import create_chat_context_token, verify_chat_context_token
 
 
 class ChatApiTests(unittest.TestCase):
@@ -45,6 +45,15 @@ class ChatApiTests(unittest.TestCase):
                 ),
             ],
         )
+
+    def test_health_endpoint_reports_prediction_and_chat_routes(self):
+        response = self.client.get("/health")
+        body = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(body["status"], "online")
+        self.assertIn("predict", body["endpoints"])
+        self.assertIn("chat", body["endpoints"])
 
     def test_valid_prediction_aware_chat_returns_provider_reply(self):
         with patch(
@@ -233,6 +242,38 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(result["risk_level"], "Moderate Risk")
         self.assertIn("chat_context_token", result)
         self.assertIsNotNone(result["chat_context_token"])
+
+    def test_bundled_model_prediction_produces_verifiable_chat_context(self):
+        if prediction_app.model is None or prediction_app.scaler is None:
+            self.skipTest("Bundled model artifacts could not be loaded.")
+
+        payload = {
+            "pregnancies": 6,
+            "glucose": 148,
+            "bloodPressure": 72,
+            "skinThickness": 35,
+            "insulin": 80,
+            "bmi": 33.6,
+            "pedigree": 0.627,
+            "age": 50,
+        }
+        response = self.client.post("/predict", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        result = response.get_json()
+        self.assertIsInstance(result["risk_percentage"], float)
+        self.assertGreaterEqual(result["risk_percentage"], 0)
+        self.assertLessEqual(result["risk_percentage"], 100)
+        self.assertIn(
+            result["risk_level"],
+            {"Low Risk", "Moderate Risk", "High Risk"},
+        )
+        context = verify_chat_context_token(result["chat_context_token"])
+        self.assertEqual(context["inputs"]["glucose"], 148)
+        self.assertEqual(
+            context["prediction"]["risk_percentage"],
+            result["risk_percentage"],
+        )
 
     def test_unavailable_context_signing_does_not_break_prediction(self):
         class TestScaler:

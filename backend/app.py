@@ -73,7 +73,9 @@ def home():
         "message": "Diabetes Prediction Server is running",
         "model_loaded": model is not None,
         "endpoints": {
-            "predict": "/predict [POST]"
+            "health": "/health [GET]",
+            "predict": "/predict [POST] or /api/predict [POST]",
+            "chat": "/api/chat [POST]",
         }
     })
 
