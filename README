@@ -180,7 +180,7 @@ The repository does not include `vercel.json`, and the repository root has no fr
 - **Output Directory:** `dist`
 - **Install Command:** `npm ci`
 - **Node.js Version:** 22.x (or another version supported by the checked-in Vite version)
-- **Environment Variable:** `VITE_API_URL=https://diabetes-prediction-system-1-qvw0.onrender.com`
+- **Environment Variable:** `VITE_API_URL=https://diabetes-prediction-system-hzvy.vercel.app`
   for Production, and for Preview if preview deployments should use the same backend.
 
 `VITE_API_URL` is substituted into the frontend at build time. Set or change it in Vercel
