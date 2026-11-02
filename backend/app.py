@@ -38,6 +38,29 @@ app = Flask(__name__)
 app.url_map.strict_slashes = False
 
 
+def is_origin_allowed(origin):
+    if not origin:
+        return False
+    origin = origin.rstrip("/")
+    configured = os.environ.get("CORS_ALLOWED_ORIGINS")
+    if configured is not None:
+        allowed = {o.strip().rstrip("/") for o in configured.split(",") if o.strip()}
+        if "*" in allowed:
+            return True
+        return origin in allowed
+
+    if os.environ.get("APP_ENV", "development").strip().lower() == "production":
+        return False
+
+    # Default / development fallback: allow any localhost/127.0.0.1 port and *.vercel.app domains
+    return (
+        origin.startswith("http://localhost:")
+        or origin.startswith("http://127.0.0.1:")
+        or origin in {"http://localhost", "http://127.0.0.1"}
+        or origin.endswith(".vercel.app")
+    )
+
+
 def allowed_frontend_origins():
     configured = os.environ.get("CORS_ALLOWED_ORIGINS")
     if configured is not None:
@@ -54,8 +77,12 @@ def allowed_frontend_origins():
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin", "").rstrip("/")
-    if origin and origin in allowed_frontend_origins():
-        response.headers["Access-Control-Allow-Origin"] = origin
+    if origin and is_origin_allowed(origin):
+        configured = os.environ.get("CORS_ALLOWED_ORIGINS")
+        if configured and "*" in [o.strip() for o in configured.split(",")]:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        else:
+            response.headers["Access-Control-Allow-Origin"] = origin
         response.vary.add("Origin")
         if request.method == "OPTIONS":
             response.headers["Access-Control-Allow-Headers"] = (
